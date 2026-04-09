@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devin's Subnet Holdings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+            min-height: 100vh;
+            color: #e6edf3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #58a6ff, #a371f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .wallet-address {
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b949e;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #f85149;
+            background: rgba(248, 81, 73, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(248, 81, 73, 0.3);
+        }
+
+        .table-container {
+            background: rgba(22, 27, 34, 0.8);
+            border-radius: 16px;
+            border: 1px solid #30363d;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(48, 54, 61, 0.6);
+        }
+
+        th {
+            padding: 20px 24px;
+            text-align: left;
+            font-weight: 600;
+            color: #c9d1d9;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        th:last-child {
+            text-align: right;
+        }
+
+        td {
+            padding: 18px 24px;
+            border-bottom: 1px solid #21262d;
+            font-size: 0.95rem;
+        }
+
+        td:last-child {
+            text-align: right;
+        }
+
+        tbody tr:hover {
+            background: rgba(48, 54, 61, 0.3);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .subnet-name {
+            font-weight: 500;
+            color: #e6edf3;
+        }
+
+        .balance {
+            color: #58a6ff;
+            font-weight: 500;
+        }
+
+        .price {
+            color: #3fb950;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b949e;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            th, td {
+                padding: 14px 16px;
+                font-size: 0.85rem;
+            }
+
+            .wallet-address {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Devin's Subnet Holdings</h1>
+        <div class="wallet-address">5CEhmdqho1Rnfri4W8KyF8nqkiovB9YQQDtH9pvFWpE3ndzZ</div>
+        
+        <div id="content">
+            <div class="loading">Loading subnet holdings...</div>
+        </div>
+    </div>
+
+    <script>
+        const WALLET_ADDRESS = '5CEhmdqho1Rnfri4W8KyF8nqkiovB9YQQDtH9pvFWpE3ndzZ';
+        const TAO_STATS_URL = `https://taostats.io/pro/portfolio/${WALLET_ADDRESS}`;
+        
+        // Backend proxy server URL (configurable)
+        const PROXY_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000/api/portfolio'
+            : '/api/portfolio';  // For production deployment
+
+        function renderTable(data) {
+            const contentDiv = document.getElementById('content');
+            
+            if (!data || data.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="table-container">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>No subnet holdings found for this wallet.</p>
+                            <p style="margin-top: 10px; font-size: 0.85rem; color: #8b949e;">
+                                This wallet may not have any subnet holdings, or the data requires authentication.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHTML = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subnet Name</th>
+                                <th>Balance</th>
+                                <th>Current Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.map(item => `
+                                <tr>
+                                    <td class="subnet-name">${item.subnetName}</td>
+                                    <td class="balance">${item.balance}</td>
+                                    <td class="price">${item.currentPrice}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = tableHTML;
+        }
+
+        function showError(message, showLink = true) {
+            const contentDiv = document.getElementById('content');
+            const linkHTML = showLink ? `
+                <p style="margin-top: 10px; font-size: 0.85rem;">
+                    You can view the data directly at:<br>
+                    <a href="${TAO_STATS_URL}" target="_blank" style="color: #58a6ff;">${TAO_STATS_URL}</a>
+                </p>
+            ` : '';
+            
+            contentDiv.innerHTML = `
+                <div class="error">
+                    <p>⚠️ ${message}</p>
+                    ${linkHTML}
+                </div>
+            `;
+        }
+
+        function showInfoMessage(message) {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = `
+                <div class="table-container" style="padding: 40px; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 16px;">ℹ️</div>
+                    <p style="color: #8b949e; margin-bottom: 20px;">${message}</p>
+                    <p style="font-size: 0.85rem;">
+                        <a href="${TAO_STATS_URL}" target="_blank" style="color: #58a6ff;">View on taostats.io →</a>
+                    </p>
+                </div>
+            `;
+        }
+
+        async function fetchData() {
+            try {
+                // Try to fetch from backend proxy server
+                console.log('Fetching data from proxy server...');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch(PROXY_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Received data:', result);
+                
+                if (result.success) {
+                    if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+                        // Transform data if needed
+                        const transformedData = transformData(result.data);
+                        renderTable(transformedData);
+                    } else if (result.message) {
+                        // Show info message from server
+                        showInfoMessage(result.message);
+                    } else {
+                        renderTable([]);
+                    }
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                
+                if (error.name === 'AbortError' || error.name === 'TypeError') {
+                    // Proxy server not available or CORS error
+                    showInfoMessage(
+                        'The backend proxy server is not running. To see real-time data, please start the proxy server (python proxy_server.py) or visit taostats.io directly.'
+                    );
+                } else {
+                    showError(`Unable to fetch data: ${error.message}`);
+                }
+            }
+        }
+
+        function transformData(data) {
+            // Transform the data from the API format to the table format
+            if (!Array.isArray(data)) {
+                return [];
+            }
+            
+            return data.map(item => ({
+                subnetName: item.subnetName || item.name || `Subnet ${item.subnetId || item.id || 'Unknown'}`,
+                balance: item.balance || item.amount || '0 TAO',
+                currentPrice: item.currentPrice || item.price || item.value || '$0.00'
+            }));
+        }
+
+        // Initialize
+        fetchData();
+    </script>
+</body>
+</html>
